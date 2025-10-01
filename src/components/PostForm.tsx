@@ -1,14 +1,7 @@
 import { useState } from 'react';
 import { supabase } from '../lib/supabaseClient';
 import type { Session } from '@supabase/supabase-js';
-
-// 親コンポーネントに型を定義
-interface Post {
-  id: number;
-  created_at: string;
-  content: string;
-  user_id: string;
-}
+import type { Post } from '../types';
 
 interface Props {
   session: Session;

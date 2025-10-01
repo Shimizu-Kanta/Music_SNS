@@ -1,91 +1,105 @@
-// 1. `useCallback`をreactからインポート
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '../lib/supabaseClient';
 import type { Session } from '@supabase/supabase-js';
-import { PostForm } from './PostForm'; // PostFormをインポート
-import { Timeline } from './Timeline'; // Timelineをインポート
+import { PostForm } from './PostForm';
+import { Timeline } from './Timeline';
+import type { Post } from '../types';
 
 interface Props {
   session: Session;
 }
 
 export const Account = ({ session }: Props) => {
+  // State管理
   const [loading, setLoading] = useState(true);
   const [username, setUsername] = useState<string | null>(null);
   const [birthday, setBirthday] = useState<string | null>(null);
+  const [posts, setPosts] = useState<Post[]>([]);
 
-  // 2. getProfile関数を`useCallback`で囲む
+  // プロフィールを取得する関数 (変更なし)
   const getProfile = useCallback(async () => {
     try {
-      setLoading(true);
       const { user } = session;
-
       const { data, error, status } = await supabase
         .from('profiles')
         .select(`username, birthday`)
         .eq('id', user.id)
         .single();
-
-      if (error && status !== 406) {
-        throw error;
-      }
-
+      if (error && status !== 406) throw error;
       if (data) {
         setUsername(data.username);
         setBirthday(data.birthday);
       }
     } catch (error) {
-      if (error instanceof Error) {
-        alert(error.message);
-      }
-    } finally {
-      setLoading(false);
+      if (error instanceof Error) alert(error.message);
     }
-    // 3. getProfile関数が依存している値をuseCallbackの依存配列に入れる
   }, [session]);
 
+  // 投稿を取得する関数をJOINを使う形に修正
+  const fetchPosts = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('posts')
+        .select('*, profiles ( username )') // JOINの記述
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      if (data) setPosts(data as Post[]);
+    } catch (error) {
+      if (error instanceof Error) alert(error.message);
+    }
+  };
+
+  // 最初にプロフィールと投稿を読み込む (変更なし)
   useEffect(() => {
-    getProfile();
-    // 4. useEffectの依存配列にgetProfileを追加する
+    const fetchData = async () => {
+      setLoading(true);
+      await getProfile();
+      await fetchPosts();
+      setLoading(false);
+    }
+    fetchData();
   }, [getProfile]);
 
-
-  // ... updateProfile関数やreturn文は変更なし ...
-const updateProfile = async (event: React.FormEvent<HTMLFormElement>) => {
+  // プロフィールを更新する関数 (変更なし)
+  const updateProfile = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-
     try {
       setLoading(true);
       const { user } = session;
-
-      // 更新するデータから `id` を除外します
       const updates = {
         username,
         birthday,
         updated_at: new Date(),
       };
-
-      // update()とeq()を使って、更新対象の行を明確に指定します
       const { error } = await supabase
         .from('profiles')
         .update(updates)
-        .eq('id', user.id); // `id`がログインユーザーのIDと一致する行を更新
-
-      if (error) {
-        throw error;
-      }
+        .eq('id', user.id);
+      if (error) throw error;
+      alert('プロフィールを更新しました！');
     } catch (error) {
-      if (error instanceof Error) {
-        alert(error.message);
-      }
+      if (error instanceof Error) alert(error.message);
     } finally {
       setLoading(false);
-      alert('プロフィールを更新しました！');
     }
   };
 
+  // 新しい投稿をリアルタイムでタイムラインに追加する関数 (型を修正)
+  const handlePostCreated = (newPost: Post) => {
+    // 新しい投稿にはprofiles情報がないので、手動で追加する
+    const postWithProfile = {
+        ...newPost,
+        profiles: {
+            username: username || 'あなた'
+        }
+    };
+    setPosts([postWithProfile, ...posts]);
+  };
+
   return (
-    <div>
+    <div style={{ maxWidth: '600px', margin: '0 auto', padding: '20px' }}>
+      <h2>プロフィール編集</h2>
       <form onSubmit={updateProfile}>
         <div>
           <label htmlFor="email">メールアドレス</label>
@@ -109,26 +123,22 @@ const updateProfile = async (event: React.FormEvent<HTMLFormElement>) => {
             onChange={(e) => setBirthday(e.target.value)}
           />
         </div>
-
         <div>
           <button type="submit" disabled={loading}>
-            {loading ? '更新中...' : 'プロフィールを更新'}
+            {loading ? '処理中...' : 'プロフィールを更新'}
           </button>
         </div>
       </form>
-
-      <button type="button" onClick={() => supabase.auth.signOut()}>
+      
+      <button type="button" onClick={() => supabase.auth.signOut()} style={{ marginTop: '10px' }}>
         ログアウト
       </button>
 
-      {/* --- ここから下を追加 --- */}
       <hr style={{ margin: '30px 0' }} />
 
-      {/* 投稿フォームを配置。session情報を渡す */}
-      <PostForm session={session} onPostCreated={() => {}} />
+      <PostForm session={session} onPostCreated={handlePostCreated} />
       
-      {/* タイムラインを配置 */}
-      <Timeline />
+      {loading ? <p>タイムラインを読み込み中...</p> : <Timeline posts={posts} />}
     </div>
   );
 };
