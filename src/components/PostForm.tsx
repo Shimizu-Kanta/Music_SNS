@@ -1,28 +1,65 @@
 import { useState } from 'react';
+import { supabase } from '../lib/supabaseClient';
+import type { Session } from '@supabase/supabase-js';
 
-interface Props {
-  onSubmit: (content: string) => void;
+// 親コンポーネントに型を定義
+interface Post {
+  id: number;
+  created_at: string;
+  content: string;
+  user_id: string;
 }
 
-export const PostForm = ({ onSubmit }: Props) => {
+interface Props {
+  session: Session;
+  onPostCreated: (newPost: Post) => void;
+}
+
+export const PostForm = ({ session, onPostCreated }: Props) => {
+  const [loading, setLoading] = useState(false);
   const [content, setContent] = useState('');
 
-  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    if (!content.trim()) return; // 空の投稿は禁止
-    onSubmit(content);
-    setContent(''); // フォームをクリア
+  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (!content.trim()) return;
+
+    try {
+      setLoading(true);
+      const { user } = session;
+      const { data, error } = await supabase
+        .from('posts')
+        .insert({ content: content, user_id: user.id })
+        .select() // INSERTしたデータを返してもらう
+        .single(); // 1行だけ返ってくるのでsingle()
+
+      if (error) throw error;
+
+      alert('投稿しました！');
+      setContent('');
+      if (data) {
+        onPostCreated(data as Post); // 親コンポーネントに新しい投稿を通知
+      }
+    } catch (error) {
+      if (error instanceof Error) {
+        alert(error.message);
+      }
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
     <form onSubmit={handleSubmit}>
       <textarea
+        placeholder="いまどうしてる？"
         value={content}
         onChange={(e) => setContent(e.target.value)}
-        placeholder="いまどうしてる？"
-        style={{ width: '100%', minHeight: '80px', padding: '8px' }}
+        rows={3}
+        style={{ width: '100%' }}
       />
-      <button type="submit" style={{ marginTop: '8px' }}>投稿する</button>
+      <button type="submit" disabled={loading}>
+        {loading ? '投稿中...' : '投稿'}
+      </button>
     </form>
   );
 };

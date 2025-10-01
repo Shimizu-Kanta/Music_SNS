@@ -2,6 +2,8 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '../lib/supabaseClient';
 import type { Session } from '@supabase/supabase-js';
+import { PostForm } from './PostForm'; // PostFormをインポート
+import { Timeline } from './Timeline'; // Timelineをインポート
 
 interface Props {
   session: Session;
@@ -118,6 +120,15 @@ const updateProfile = async (event: React.FormEvent<HTMLFormElement>) => {
       <button type="button" onClick={() => supabase.auth.signOut()}>
         ログアウト
       </button>
+
+      {/* --- ここから下を追加 --- */}
+      <hr style={{ margin: '30px 0' }} />
+
+      {/* 投稿フォームを配置。session情報を渡す */}
+      <PostForm session={session} onPostCreated={() => {}} />
+      
+      {/* タイムラインを配置 */}
+      <Timeline />
     </div>
   );
 };
