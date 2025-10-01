@@ -1,9 +1,12 @@
-import { Timeline } from './pages/Timeline';
+import { Auth } from './components/Auth';
 
 function App() {
   return (
     <div>
-      <Timeline />
+      <h1>
+        MusicSNSへようこそ
+      </h1>
+      <Auth />
     </div>
   );
 }
