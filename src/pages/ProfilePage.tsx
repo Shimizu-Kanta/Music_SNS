@@ -4,6 +4,7 @@ import { supabase } from '../lib/supabaseClient';
 import type { Session } from '@supabase/supabase-js';
 import { ProfileEdit } from '../components/ProfileEdit';
 import { FavoriteMusicManager } from '../components/FavoriteMusicManager';
+import { FavoriteArtistManager } from '../components/FavoriteArtistManager';
 import type { Profile } from '../types';
 
 // AttendedConcertの型定義からcityを削除
@@ -83,13 +84,19 @@ export const ProfilePage = ({ session }: Props) => {
     <div style={{ maxWidth: '800px', margin: '0 auto', padding: '20px' }}>
       <h1>{profile.username}'s Profile</h1>
       
-      {isOwnProfile && <ProfileEdit session={session} />}
+      {/* isOwnProfileがtrueの場合にのみ、編集関連のコンポーネントを表示する */}
+      {isOwnProfile && (
+        <>
+          <ProfileEdit session={session} />
+          <hr style={{ margin: '30px 0' }} />
+          <FavoriteMusicManager session={session} />
+          <hr style={{ margin: '30px 0' }} />
+          <FavoriteArtistManager session={session} />
+        </>
+      )}
 
       <hr style={{ margin: '30px 0' }} />
 
-      <FavoriteMusicManager session={session} />
-
-      <hr style={{ margin: '30px 0' }} />
       <div>
         <h2>参加したライブ</h2>
         {attendedConcerts.length > 0 ? (
