@@ -19,20 +19,26 @@ import {
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 
+// 型定義
 interface SpotifyTrack {
   id: string;
   name: string;
   artists: { name: string }[];
+  album: {
+    images: { url: string }[];
+  }
 }
 interface FavoriteSong {
   id: number;
-  user_id: string; // user_idを型に含めておく
+  user_id: string;
   song_id: string;
   song_name: string;
   artist_name: string;
   sort_order: number;
+  album_art_url: string | null;
 }
 
+// ドラッグ可能なリストアイテムコンポーネント
 const SortableSongItem = ({ song, onRemove }: { song: FavoriteSong, onRemove: (id: number) => void }) => {
   const {
     attributes,
@@ -51,15 +57,13 @@ const SortableSongItem = ({ song, onRemove }: { song: FavoriteSong, onRemove: (i
     backgroundColor: '#f9f9f9',
     border: '1px solid #ddd',
     display: 'flex',
-    alignItems: 'center', // vertically center
+    alignItems: 'center',
     justifyContent: 'space-between',
   };
 
   return (
-    // listenersをliから外す
     <li ref={setNodeRef} style={style}>
       <div style={{ display: 'flex', alignItems: 'center' }}>
-        {/* ドラッグ用のハンドル（取っ手）を作成し、listenersとattributesをここに適用 */}
         <span 
           {...attributes} 
           {...listeners} 
@@ -67,7 +71,13 @@ const SortableSongItem = ({ song, onRemove }: { song: FavoriteSong, onRemove: (i
         >
           ⠿
         </span>
-        <span>{song.song_name} - {song.artist_name}</span>
+        {song.album_art_url && (
+            <img src={song.album_art_url} alt={song.song_name} width="50" height="50" style={{ marginRight: '10px' }} />
+        )}
+        <div>
+            <div><strong>{song.song_name}</strong></div>
+            <div>{song.artist_name}</div>
+        </div>
       </div>
       <button onClick={() => onRemove(song.id)}>削除</button>
     </li>
@@ -80,7 +90,7 @@ interface Props {
 
 export const FavoriteMusicManager = ({ session }: Props) => {
   const [searchQuery, setSearchQuery] = useState('');
-  const [searchResults, setSearchResults] = useState<{ tracks: { items: SpotifyTrack[] }; artists: { items: SpotifyArtist[] } } | null>(null);
+  const [searchResults, setSearchResults] = useState<{ tracks: { items: SpotifyTrack[] } } | null>(null);
   const [isSearching, setIsSearching] = useState(false);
   const [favoriteSongs, setFavoriteSongs] = useState<FavoriteSong[]>([]);
 
@@ -89,7 +99,7 @@ export const FavoriteMusicManager = ({ session }: Props) => {
       try {
         const { data, error } = await supabase
           .from('favorite_songs')
-          .select('*') // user_idも取得するために'*'
+          .select('*')
           .eq('user_id', session.user.id)
           .order('sort_order');
         if (error) throw error;
@@ -114,20 +124,22 @@ export const FavoriteMusicManager = ({ session }: Props) => {
       const newSongs = arrayMove(favoriteSongs, oldIndex, newIndex);
       setFavoriteSongs(newSongs);
 
-      // ▼▼▼ ここが最重要の修正点 ▼▼▼
       const updates = newSongs.map((song, index) => ({
         id: song.id,
-        user_id: song.user_id, // この行を追加！
-        sort_order: index + 1,
+        user_id: song.user_id, 
+        sort_order: index, // 0から始まるように修正
       }));
-      // ▲▲▲ ここまで ▲▲▲
 
       try {
         const { error } = await supabase.from('favorite_songs').upsert(updates);
         if (error) throw error;
       } catch (error) {
-        if (error instanceof Error) alert('順番の保存に失敗しました: ' + error.message);
-        setFavoriteSongs(favoriteSongs);
+        if (error instanceof Error) {
+          alert('順番の保存に失敗しました: ' + error.message);
+          // エラーが起きたら元の順序に戻す
+          const { data } = await supabase.from('favorite_songs').select('*').eq('user_id', session.user.id).order('sort_order');
+          if(data) setFavoriteSongs(data);
+        }
       }
     }
   };
@@ -137,7 +149,7 @@ export const FavoriteMusicManager = ({ session }: Props) => {
     try {
       setIsSearching(true);
       const { data, error } = await supabase.functions.invoke('spotify-search', {
-        body: { query: searchQuery },
+        body: { query: searchQuery, type: 'track' }, // type: 'track' を明示
       });
       if (error) throw error;
       setSearchResults(data);
@@ -160,7 +172,8 @@ export const FavoriteMusicManager = ({ session }: Props) => {
         song_id: track.id,
         song_name: track.name,
         artist_name: track.artists.map(a => a.name).join(', '),
-        sort_order: favoriteSongs.length + 1,
+        sort_order: favoriteSongs.length, // 0から始まるように修正
+        album_art_url: track.album.images[0]?.url || null,
       };
       const { data, error } = await supabase.from('favorite_songs').insert(newSong).select().single();
       if (error) throw error;
@@ -176,9 +189,8 @@ export const FavoriteMusicManager = ({ session }: Props) => {
         .from('favorite_songs')
         .delete()
         .eq('id', songId)
-        .eq('user_id', session.user.id); //  user_idのチェックを追加
+        .eq('user_id', session.user.id);
       if (error) throw error;
-
       setFavoriteSongs(favoriteSongs.filter(song => song.id !== songId));
     } catch (error) {
       if (error instanceof Error) alert(error.message);
@@ -187,34 +199,22 @@ export const FavoriteMusicManager = ({ session }: Props) => {
 
   return (
     <div>
-      <h3>お気に入りミュージック管理</h3>
-      <div>
-        <h4>現在のリスト（ドラッグ＆ドロップで並び替え）</h4>
-        {favoriteSongs.length > 0 ? (
-          <DndContext
-            sensors={sensors}
-            collisionDetection={closestCenter}
-            onDragEnd={handleDragEnd}
-          >
-            <SortableContext
-              items={favoriteSongs}
-              strategy={verticalListSortingStrategy}
-            >
-              <ol style={{ listStyle: 'none', padding: 0 }}>
-                {favoriteSongs.map((song) => (
-                  <SortableSongItem key={song.id} song={song} onRemove={removeFavoriteSong} />
-                ))}
-              </ol>
-            </SortableContext>
-          </DndContext>
-        ) : (
-          <p>まだ登録されていません。</p>
-        )}
-      </div>
+      <h3>お気に入り楽曲</h3>
+      
+      <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+        <SortableContext items={favoriteSongs.map(song => song.id)} strategy={verticalListSortingStrategy}>
+          <ul style={{ listStyle: 'none', padding: 0 }}>
+            {favoriteSongs.map(song => (
+              <SortableSongItem key={song.id} song={song} onRemove={removeFavoriteSong} />
+            ))}
+          </ul>
+        </SortableContext>
+      </DndContext>
       
       <hr />
+
       <div>
-        <h4>曲・アーティストを検索</h4>
+        <h4>曲を検索</h4>
         <input
           type="text"
           value={searchQuery}
@@ -225,15 +225,20 @@ export const FavoriteMusicManager = ({ session }: Props) => {
           {isSearching ? '検索中...' : '検索'}
         </button>
       </div>
-      {searchResults && (
+
+      {searchResults && searchResults.tracks && (
         <div>
           <h4>検索結果</h4>
-          <h5>曲</h5>
-          <ul>
+          <ul style={{ listStyle: 'none', padding: 0 }}>
             {searchResults.tracks.items.map(track => (
-              <li key={track.id}>
-                {track.name} by {track.artists.map(a => a.name).join(', ')}{' '}
-                <button onClick={() => addFavoriteSong(track)}>追加</button>
+              <li key={track.id} onClick={() => addFavoriteSong(track)} style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', margin: '10px 0', padding: '5px', border: '1px solid #eee' }}>
+                {track.album.images[0] && (
+                  <img src={track.album.images[0].url} alt={track.name} width="50" height="50" style={{ marginRight: '10px' }} />
+                )}
+                <div>
+                  <div><strong>{track.name}</strong></div>
+                  <div>{track.artists.map(artist => artist.name).join(', ')}</div>
+                </div>
               </li>
             ))}
           </ul>
