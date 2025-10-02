@@ -42,10 +42,10 @@ export const HomePage = ({ session }: Props) => {
   // 投稿を取得する関数をJOINを使う形に修正
   const fetchPosts = async () => {
     try {
-      const { data, error } = await supabase
-        .from('posts')
-        .select('*, profiles ( username )') // JOINの記述
-        .order('created_at', { ascending: false });
+        const { data, error } = await supabase
+          .from('posts')
+          .select('*, profiles ( username ), likes(*), comments(*, profiles ( username ))') // JOINの記述
+          .order('created_at', { ascending: false });
 
       if (error) throw error;
       if (data) setPosts(data as Post[]);
@@ -145,6 +145,7 @@ export const HomePage = ({ session }: Props) => {
       <hr style={{ margin: '30px 0' }} />
 
       <PostForm session={session} onPostCreated={handlePostCreated} />
+      <Timeline posts={posts} session={session} />
       
       {loading ? <p>タイムラインを読み込み中...</p> : <Timeline posts={posts} />}
     </div>

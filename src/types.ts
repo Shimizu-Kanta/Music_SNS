@@ -11,4 +11,19 @@ export interface Post {
   song_name?: string | null;
   artist_name?: string | null;
   album_art_url?: string | null;
+  likes: {
+    user_id: string;
+  }[];
+  comments: Comment[];
+}
+
+export interface Comment {
+  id: number;
+  created_at: string;
+  content: string;
+  user_id: string;
+  post_id: number;
+  profiles: {
+    username: string;
+  } | null;
 }
