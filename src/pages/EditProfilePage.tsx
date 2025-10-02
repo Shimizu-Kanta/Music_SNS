@@ -3,6 +3,7 @@ import { ProfileEdit } from '../components/ProfileEdit';
 import { FavoriteMusicManager } from '../components/FavoriteMusicManager';
 import { FavoriteArtistManager } from '../components/FavoriteArtistManager';
 import { Avatar } from '../components/Avatar';
+import { HeaderImageUploader } from '../components/HeaderImageUploader';
 
 interface Props {
   session: Session;
@@ -14,6 +15,8 @@ export const EditProfilePage = ({ session }: Props) => {
       <h1>プロフィールの編集</h1>
       
       <Avatar session={session} />
+      <hr style={{ margin: '30px 0' }} />
+      <HeaderImageUploader session={session} />
       <hr style={{ margin: '30px 0' }} />
       <ProfileEdit session={session} />
       <hr style={{ margin: '30px 0' }} />
