@@ -27,3 +27,10 @@ export interface Comment {
     username: string;
   } | null;
 }
+
+export interface Profile {
+  id: string;
+  updated_at: string | null;
+  username: string;
+  website: string | null;
+}
