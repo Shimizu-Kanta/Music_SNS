@@ -118,8 +118,15 @@ export const Timeline = ({ posts: initialPosts, session }: Props) => {
           <div key={post.id} style={{ border: '1px solid #ccc', padding: '15px', margin: '15px 0', borderRadius: '8px' }}>
             
             <Link to={`/profile/${post.user_id}`} style={{ textDecoration: 'none', color: 'inherit' }}>
+            <div style={{ display: 'flex', alignItems: 'center', marginBottom: '10px' }}>
+              {post.profiles?.avatar_url ? (
+                <img src={post.profiles.avatar_url} alt={post.profiles.username} style={{ width: '40px', height: '40px', borderRadius: '50%', marginRight: '10px' }} />
+              ) : (
+                <div style={{ width: '40px', height: '40px', backgroundColor: '#eee', borderRadius: '50%', marginRight: '10px' }} />
+              )}
               <strong>{post.profiles?.username || '匿名ユーザー'}</strong>
-            </Link>
+            </div>
+          </Link>
             
             {post.content && <p style={{ marginTop: '10px' }}>{post.content}</p>}
             

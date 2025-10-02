@@ -83,18 +83,31 @@ export const ProfilePage = ({ session }: Props) => {
   const isOwnProfile = session.user.id === userId;
 
   return (
-    <div style={{ maxWidth: '800px', margin: '0 auto', padding: '20px' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <h1>{profile.username}'s Profile</h1>
-        {isOwnProfile && (
+    <div style={{ maxWidth: '800px', margin: '0 auto', padding: '20px' }}> {/* ←これが唯一の親要素 */}
+      
+      {/* --- プロフィールヘッダー --- */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
+        {profile.avatar_url ? (
+          <img src={profile.avatar_url} alt={profile.username} style={{ width: '100px', height: '100px', borderRadius: '50%' }} />
+        ) : (
+          <div style={{ width: '100px', height: '100px', backgroundColor: '#eee', borderRadius: '50%' }} />
+        )}
+        <div>
+          <h1>{profile.username}'s Profile</h1>
+          {profile.birthday && <p>生年月日: {new Date(profile.birthday).toLocaleDateString()}</p>}
+        </div>
+      </div>
+      {isOwnProfile && (
+        <div style={{ marginTop: '20px' }}>
           <Link to="/profile/edit">
             <button>プロフィールを編集する</button>
           </Link>
-        )}
-      </div>
+        </div>
+      )}
 
-      {profile.birthday && <p>生年月日: {new Date(profile.birthday).toLocaleDateString()}</p>}
+      {/* --- 重複していた行は削除 --- */}
 
+      {/* --- お気に入り楽曲 --- */}
       <hr style={{ margin: '30px 0' }} />
       <div>
         <h2>お気に入り楽曲</h2>
@@ -110,6 +123,7 @@ export const ProfilePage = ({ session }: Props) => {
         ) : <p>お気に入りの楽曲はありません。</p>}
       </div>
 
+      {/* --- お気に入りアーティスト --- */}
       <hr style={{ margin: '30px 0' }} />
       <div>
         <h2>お気に入りアーティスト</h2>
@@ -125,6 +139,7 @@ export const ProfilePage = ({ session }: Props) => {
         ) : <p>お気に入りのアーティストはありません。</p>}
       </div>
       
+      {/* --- 参加したライブ --- */}
       <hr style={{ margin: '30px 0' }} />
       <div>
         <h2>参加したライブ</h2>
@@ -146,6 +161,7 @@ export const ProfilePage = ({ session }: Props) => {
           <p>まだ参加したライブが登録されていません。</p>
         )}
       </div>
-    </div>
+
+    </div> // ← 正しい閉じタグの位置はここ
   );
 };

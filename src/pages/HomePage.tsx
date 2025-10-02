@@ -15,7 +15,7 @@ export const HomePage = ({ session }: Props) => {
   const fetchPosts = useCallback(async () => {
     const { data, error } = await supabase
       .from('posts')
-      .select('*, profiles(username), likes(*), comments(*, profiles(username))')
+      .select('*, profiles(username, avatar_url), likes(*), comments(*, profiles(username, avatar_url)))')
       .order('created_at', { ascending: false });
 
     if (error) {
