@@ -5,10 +5,11 @@ import { HomePage } from './pages/HomePage';
 import { ProfilePage } from './pages/ProfilePage';
 import { AddEventPage } from './pages/AddEventPage';
 import { EditProfilePage } from './pages/EditProfilePage'; 
+import { FollowListPage } from './pages/FollowListPage';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { Layout } from './components/Layout';
-import { LoginPage } from './pages/LoginPage'; // 新しくインポート
-import { SignUpPage } from './pages/SignUpPage'; // 新しくインポート
+import { LoginPage } from './pages/LoginPage'; 
+import { SignUpPage } from './pages/SignUpPage'; 
 
 function App() {
   const [session, setSession] = useState<Session | null>(null);
@@ -53,6 +54,8 @@ function App() {
           <Route path="/profile/:userId" element={<ProfilePage session={session} />} />
           <Route path="/add-event" element={<AddEventPage session={session} />} />
           <Route path="/profile/edit" element={<EditProfilePage session={session} />} />
+          <Route path="/profile/:userId/followers" element={<FollowListPage />} />
+          <Route path="/profile/:userId/following" element={<FollowListPage />} />
           <Route path="/login" element={<Navigate to="/" replace />} />
           <Route path="/signup" element={<Navigate to="/" replace />} />
         </Route>

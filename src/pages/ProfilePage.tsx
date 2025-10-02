@@ -3,6 +3,7 @@ import { useParams, Link } from 'react-router-dom';
 import { supabase } from '../lib/supabaseClient';
 import type { Session } from '@supabase/supabase-js';
 import type { Profile } from '../types';
+import { FollowButton } from '../components/FollowButton';
 
 // 型定義
 interface FavoriteSong {
@@ -38,6 +39,8 @@ export const ProfilePage = ({ session }: Props) => {
   const [favoriteSongs, setFavoriteSongs] = useState<FavoriteSong[]>([]);
   const [favoriteArtists, setFavoriteArtists] = useState<FavoriteArtist[]>([]);
   const [attendedConcerts, setAttendedConcerts] = useState<AttendedConcert[]>([]);
+  const [followingCount, setFollowingCount] = useState(0);
+  const [followerCount, setFollowerCount] = useState(0);
 
   useEffect(() => {
     const fetchProfileData = async () => {
@@ -49,12 +52,16 @@ export const ProfilePage = ({ session }: Props) => {
         profileRes,
         songsRes,
         artistsRes,
-        concertsRes
+        concertsRes,
+        followingRes,
+        followerRes
       ] = await Promise.all([
         supabase.from('profiles').select('*').eq('id', userId).single(),
         supabase.from('favorite_songs').select('id, song_name, artist_name, album_art_url').eq('user_id', userId).order('sort_order'),
         supabase.from('favorite_artists').select('id, artist_name, artist_image_url').eq('user_id', userId),
-        supabase.from('user_attended_concerts').select(`id, notes, concerts (event_date, artist_name, event_name, venue_name)`).eq('user_id', userId).order('event_date', { foreignTable: 'concerts', ascending: false })
+        supabase.from('user_attended_concerts').select(`id, notes, concerts (event_date, artist_name, event_name, venue_name)`).eq('user_id', userId).order('event_date', { foreignTable: 'concerts', ascending: false }),
+        supabase.from('followers').select('*', { count: 'exact', head: true }).eq('follower_id', userId),
+        supabase.from('followers').select('*', { count: 'exact', head: true }).eq('following_id', userId)
       ]);
 
       if (profileRes.error || songsRes.error || artistsRes.error || concertsRes.error) {
@@ -69,6 +76,8 @@ export const ProfilePage = ({ session }: Props) => {
         setFavoriteSongs(songsRes.data || []);
         setFavoriteArtists(artistsRes.data || []);
         setAttendedConcerts(concertsRes.data || []);
+        setFollowingCount(followingRes.count || 0);
+        setFollowerCount(followerRes.count || 0);
       }
 
       setLoading(false);
@@ -83,41 +92,56 @@ export const ProfilePage = ({ session }: Props) => {
   const isOwnProfile = session.user.id === userId;
 
   return (
-    <div style={{ maxWidth: '800px', margin: '0 auto', padding: '20px' }}> {/* ←これが唯一の親要素 */}
-      {/* ▼▼▼ ヘッダー画像表示エリア ▼▼▼ */}
-      <div style={{ height: '250px', backgroundColor: '#eee', marginBottom: '-50px' }}>
+    <div style={{ maxWidth: '800px', margin: '0 auto' }}>
+      {/* --- ヘッダー画像 --- */}
+      <div style={{ height: '250px', backgroundColor: '#eee' }}>
         {profile.header_url && (
           <img src={profile.header_url} alt="Header" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
         )}
       </div>
-
+      
+      {/* --- プロフィール詳細エリア --- */}
       <div style={{ padding: '0 20px' }}>
-        {/* ▼▼▼ プロフィールヘッダーエリア ▼▼▼ */}
-        <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between' }}>
-          <div style={{ display: 'flex', alignItems: 'flex-end', gap: '20px' }}>
-            {profile.avatar_url ? (
-              <img src={profile.avatar_url} alt={profile.username} style={{ width: '120px', height: '120px', borderRadius: '50%', border: '4px solid white' }} />
-            ) : (
-              <div style={{ width: '120px', height: '120px', backgroundColor: '#eee', borderRadius: '50%', border: '4px solid white' }} />
-            )}
-            <div>
-              <h1 style={{ margin: 0 }}>{profile.username}</h1>
-              {profile.birthday && <p style={{ margin: 0 }}>生年月日: {new Date(profile.birthday).toLocaleDateString()}</p>}
-            </div>
-          </div>
-          {isOwnProfile && (
-            <Link to="/profile/edit">
-              <button>プロフィールを編集する</button>
-            </Link>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+          {/* アイコン（ネガティブマージンで上に引き上げる） */}
+          {profile.avatar_url ? (
+            <img src={profile.avatar_url} alt={profile.username} style={{ width: '120px', height: '120px', borderRadius: '50%', border: '4px solid white', marginTop: '-60px' }} />
+          ) : (
+            <div style={{ width: '120px', height: '120px', backgroundColor: '#eee', borderRadius: '50%', border: '4px solid white', marginTop: '-60px' }} />
           )}
+
+          {/* フォロー/編集ボタン */}
+          <div style={{ paddingTop: '10px' }}>
+            {userId && (
+              isOwnProfile ? (
+                <Link to="/profile/edit">
+                  <button>プロフィールを編集する</button>
+                </Link>
+              ) : (
+                <FollowButton session={session} targetUserId={userId} />
+              )
+            )}
+          </div>
         </div>
 
-        {/* ▼▼▼ 自己紹介文表示エリア ▼▼▼ */}
-        {profile.bio && (
-          <p style={{ marginTop: '20px', padding: '10px', backgroundColor: '#f9f9f9', borderRadius: '5px' }}>
-            {profile.bio}
-          </p>
-        )}
+        {/* ユーザー名、フォロー数、自己紹介 */}
+        <div style={{ marginTop: '10px' }}>
+          <h1 style={{ margin: 0 }}>{profile.username}</h1>
+          {profile.birthday && <p style={{ margin: '0 0 10px 0', color: '#555' }}>生年月日: {new Date(profile.birthday).toLocaleDateString()}</p>}
+          <div style={{ display: 'flex', gap: '15px', margin: '10px 0' }}>
+            <Link to={`/profile/${userId}/following`} style={{ textDecoration: 'none', color: 'inherit' }}>
+              <span><strong>{followingCount}</strong> フォロー中</span>
+            </Link>
+            <Link to={`/profile/${userId}/followers`} style={{ textDecoration: 'none', color: 'inherit' }}>
+              <span><strong>{followerCount}</strong> フォロワー</span>
+            </Link>
+          </div>
+          {profile.bio && (
+            <p style={{ marginTop: '10px', whiteSpace: 'pre-wrap' }}>
+              {profile.bio}
+            </p>
+          )}
+        </div>
       </div>
 
       <div style={{ padding: '20px' }}></div>
@@ -177,6 +201,6 @@ export const ProfilePage = ({ session }: Props) => {
         )}
       </div>
 
-    </div> // ← 正しい閉じタグの位置はここ
+    </div>
   );
 };
