@@ -3,6 +3,7 @@ import type { Post, Comment } from '../types'; // Commentをインポート
 import { Link } from 'react-router-dom';
 import { supabase } from '../lib/supabaseClient';
 import type { Session } from '@supabase/supabase-js';
+import { MusicLinkModal } from './MusicLinkModal';
 
 // コメント投稿フォームを小さなコンポーネントとして作成
 const CommentForm = ({ postId, userId, onCommentPosted }: { postId: number, userId: string, onCommentPosted: (newComment: Comment) => void }) => {
@@ -56,6 +57,7 @@ interface Props {
 export const Timeline = ({ posts: initialPosts, session }: Props) => {
 
   const [posts, setPosts] = useState(initialPosts);
+  const [selectedPost, setSelectedPost] = useState<Post | null>(null);
 
   useEffect(() => {
     setPosts(initialPosts);
@@ -106,6 +108,13 @@ export const Timeline = ({ posts: initialPosts, session }: Props) => {
     setPosts(updatedPosts);
   };
 
+  const openLinkModal = (post: Post) => {
+    setSelectedPost(post);
+  };
+  const closeLinkModal = () => {
+    setSelectedPost(null);
+  };
+
   return (
     <div>
       <h2>タイムライン</h2>
@@ -130,15 +139,19 @@ export const Timeline = ({ posts: initialPosts, session }: Props) => {
             
             {post.content && <p style={{ marginTop: '10px' }}>{post.content}</p>}
             
-            {post.album_art_url && (
-              <div style={{ marginTop: '15px', border: '1px solid #eee', padding: '10px', display: 'flex', alignItems: 'center', backgroundColor: '#f9f9f9' }}>
-                <img src={post.album_art_url} alt={post.song_name || ''} width="64" height="64" style={{ marginRight: '15px' }} />
-                <div>
-                  <div><strong>{post.song_name}</strong></div>
-                  <div>{post.artist_name}</div>
-                </div>
+            {post.song_name && post.artist_name && (
+            <div onClick={() => openLinkModal(post)} style={{
+              padding: '10px', backgroundColor: '#f0f0f0', 
+              borderRadius: '8px', cursor: 'pointer',
+              display: 'flex', alignItems: 'center', gap: '10px'
+            }}>
+              {post.album_art_url && <img src={post.album_art_url} alt={post.song_name} width="50" height="50" />}
+              <div>
+                <div><strong>{post.song_name}</strong></div>
+                <div>{post.artist_name}</div>
               </div>
-            )}
+            </div>
+          )}
             
             <div style={{ display: 'flex', alignItems: 'center', marginTop: '10px' }}>
               <button onClick={() => isLikedByCurrentUser ? handleUnlike(post.id) : handleLike(post.id)}>
@@ -165,6 +178,14 @@ export const Timeline = ({ posts: initialPosts, session }: Props) => {
                 userId={session.user.id} 
                 onCommentPosted={(newComment) => handleCommentAdded(post.id, newComment)}
               />
+              {selectedPost && (
+                <MusicLinkModal
+                  isOpen={!!selectedPost}
+                  onClose={closeLinkModal}
+                  songName={selectedPost.song_name}
+                  artistName={selectedPost.artist_name}
+                />
+              )}
             </div>
           </div>
         );
