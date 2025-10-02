@@ -7,4 +7,8 @@ export interface Post {
   profiles: {
     username: string;
   } | null;
+  song_id?: string | null;
+  song_name?: string | null;
+  artist_name?: string | null;
+  album_art_url?: string | null;
 }
