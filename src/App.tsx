@@ -1,53 +1,44 @@
 import { useState, useEffect } from 'react';
 import { supabase } from './lib/supabaseClient';
-import { Auth } from './components/Auth';
-import { HomePage } from './pages/HomePage'; // 新しく作ったHomePageをインポート
-import { ProfilePage } from './pages/ProfilePage';
-import { Routes, Route, Link } from 'react-router-dom';
 import type { Session } from '@supabase/supabase-js';
-
-// ここにProfilePageを後で追加します
-// import { ProfilePage } from './pages/ProfilePage';
+import { Auth } from './components/Auth';
+import { HomePage } from './pages/HomePage';
+import { ProfilePage } from './pages/ProfilePage';
+import { AddEventPage } from './pages/AddEventPage';
+import { Routes, Route } from 'react-router-dom';
 
 function App() {
   const [session, setSession] = useState<Session | null>(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    const getSession = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
       setSession(session);
-    });
+      setLoading(false);
+    };
+
+    getSession();
+
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setSession(session);
     });
+
     return () => subscription.unsubscribe();
   }, []);
 
-  return (
-    <div>
-      <header style={{ padding: '20px', borderBottom: '1px solid #ccc' }}>
-        <nav>
-          <Link to="/">ホーム</Link>
-          {session && (
-            // 自分のプロフィールページへのリンクを追加
-            <Link to={`/profile/${session.user.id}`} style={{ marginLeft: '20px' }}>
-              マイプロフィール
-            </Link>
-          )}
-        </nav>
-      </header>
+  if (loading) {
+    return <div>Loading...</div>; // 最初のセッションチェック中はローディング表示
+  }
 
-      <main>
-        {!session ? (
-          // ログインしていない場合は、常にログインフォームを表示
-          <Auth />
-        ) : (
-          // ログインしている場合は、URLに応じてページを切り替える
-          <Routes>
-            <Route path="/" element={<HomePage session={session} />} />
-            <Route path="/profile/:userId" element={<ProfilePage />} />
-          </Routes>
-        )}
-      </main>
+  // ここで、全てのルートのelementを `!session ? <Auth /> : ...` の形式に統一します
+  return (
+    <div className="container" style={{ padding: '50px 0 100px 0' }}>
+      <Routes>
+        <Route path="/" element={!session ? <Auth /> : <HomePage session={session} />} />
+        <Route path="/profile/:userId" element={!session ? <Auth /> : <ProfilePage session={session} />} />
+        <Route path="/add-event" element={!session ? <Auth /> : <AddEventPage session={session} />} />
+      </Routes>
     </div>
   );
 }

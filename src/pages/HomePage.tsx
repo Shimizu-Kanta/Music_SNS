@@ -2,6 +2,7 @@
 // ただし、ファイル名がHomePageになるのでコンポーネント名も変更する
 
 import { useState, useEffect, useCallback } from 'react';
+import { Link } from 'react-router-dom';
 import { supabase } from '../lib/supabaseClient';
 import type { Session } from '@supabase/supabase-js';
 import { PostForm } from '../components/PostForm';
@@ -103,6 +104,11 @@ export const HomePage = ({ session }: Props) => {
 
   return (
     <div style={{ maxWidth: '600px', margin: '0 auto', padding: '20px' }}>
+      <div style={{ marginBottom: '20px', padding: '10px', border: '1px solid #eee' }}>
+        <Link to="/add-event">
+          <button>新しいライブ参加履歴を登録する</button>
+        </Link>
+      </div>
       <h2>プロフィール編集</h2>
       <form onSubmit={updateProfile}>
         <div>
