@@ -9,6 +9,7 @@ interface Props {
 export const ProfileEdit = ({ session }: Props) => {
   const [loading, setLoading] = useState(true);
   const [username, setUsername] = useState('');
+  const [birthday, setBirthday] = useState<string | null>(null); // dateOfBirth -> birthday
 
   useEffect(() => {
     let ignore = false;
@@ -18,7 +19,7 @@ export const ProfileEdit = ({ session }: Props) => {
 
       const { data, error } = await supabase
         .from('profiles')
-        .select(`username`)
+        .select(`username, birthday`) // date_of_birth -> birthday
         .eq('id', user.id)
         .single();
 
@@ -27,14 +28,13 @@ export const ProfileEdit = ({ session }: Props) => {
           console.warn(error);
         } else if (data) {
           setUsername(data.username || '');
+          setBirthday(data.birthday); // date_of_birth -> birthday
         }
       }
-
       setLoading(false);
     };
 
     getProfile();
-
     return () => {
       ignore = true;
     };
@@ -46,13 +46,10 @@ export const ProfileEdit = ({ session }: Props) => {
     setLoading(true);
     const { user } = session;
 
-    const updates = {
-      id: user.id,
-      username,
-      updated_at: new Date(),
-    };
-
-    const { error } = await supabase.from('profiles').upsert(updates);
+    const { error } = await supabase
+      .from('profiles')
+      .update({ username, birthday, updated_at: new Date() })
+      .eq('id', user.id); // 更新する行をIDで直接指定
 
     if (error) {
       alert(error.message);
@@ -73,6 +70,15 @@ export const ProfileEdit = ({ session }: Props) => {
             type="text"
             value={username}
             onChange={(e) => setUsername(e.target.value)}
+          />
+        </div>
+        <div>
+          <label htmlFor="birthday">生年月日</label>
+          <input
+            id="birthday"
+            type="date"
+            value={birthday || ''}
+            onChange={(e) => setBirthday(e.target.value)}
           />
         </div>
         <div>
