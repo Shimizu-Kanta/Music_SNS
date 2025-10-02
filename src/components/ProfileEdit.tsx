@@ -9,7 +9,8 @@ interface Props {
 export const ProfileEdit = ({ session }: Props) => {
   const [loading, setLoading] = useState(true);
   const [username, setUsername] = useState('');
-  const [birthday, setBirthday] = useState<string | null>(null); // dateOfBirth -> birthday
+  const [birthday, setBirthday] = useState<string | null>(null);
+  const [bio, setBio] = useState('');
 
   useEffect(() => {
     let ignore = false;
@@ -19,7 +20,7 @@ export const ProfileEdit = ({ session }: Props) => {
 
       const { data, error } = await supabase
         .from('profiles')
-        .select(`username, birthday`) // date_of_birth -> birthday
+        .select(`username, birthday, bio`) 
         .eq('id', user.id)
         .single();
 
@@ -28,7 +29,8 @@ export const ProfileEdit = ({ session }: Props) => {
           console.warn(error);
         } else if (data) {
           setUsername(data.username || '');
-          setBirthday(data.birthday); // date_of_birth -> birthday
+          setBirthday(data.birthday); 
+          setBio(data.bio || '');
         }
       }
       setLoading(false);
@@ -48,7 +50,7 @@ export const ProfileEdit = ({ session }: Props) => {
 
     const { error } = await supabase
       .from('profiles')
-      .update({ username, birthday, updated_at: new Date() })
+      .update({ username, birthday, bio, updated_at: new Date() })
       .eq('id', user.id); // 更新する行をIDで直接指定
 
     if (error) {
@@ -79,6 +81,16 @@ export const ProfileEdit = ({ session }: Props) => {
             type="date"
             value={birthday || ''}
             onChange={(e) => setBirthday(e.target.value)}
+          />
+        </div>
+        <div>
+          <label htmlFor="bio">自己紹介</label>
+          <textarea
+            id="bio"
+            value={bio}
+            onChange={(e) => setBio(e.target.value)}
+            rows={4}
+            placeholder="自己紹介文を入力..."
           />
         </div>
         <div>

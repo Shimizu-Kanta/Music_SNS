@@ -84,28 +84,43 @@ export const ProfilePage = ({ session }: Props) => {
 
   return (
     <div style={{ maxWidth: '800px', margin: '0 auto', padding: '20px' }}> {/* ←これが唯一の親要素 */}
-      
-      {/* --- プロフィールヘッダー --- */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
-        {profile.avatar_url ? (
-          <img src={profile.avatar_url} alt={profile.username} style={{ width: '100px', height: '100px', borderRadius: '50%' }} />
-        ) : (
-          <div style={{ width: '100px', height: '100px', backgroundColor: '#eee', borderRadius: '50%' }} />
+      {/* ▼▼▼ ヘッダー画像表示エリア ▼▼▼ */}
+      <div style={{ height: '250px', backgroundColor: '#eee', marginBottom: '-50px' }}>
+        {profile.header_url && (
+          <img src={profile.header_url} alt="Header" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
         )}
-        <div>
-          <h1>{profile.username}'s Profile</h1>
-          {profile.birthday && <p>生年月日: {new Date(profile.birthday).toLocaleDateString()}</p>}
-        </div>
       </div>
-      {isOwnProfile && (
-        <div style={{ marginTop: '20px' }}>
-          <Link to="/profile/edit">
-            <button>プロフィールを編集する</button>
-          </Link>
-        </div>
-      )}
 
-      {/* --- 重複していた行は削除 --- */}
+      <div style={{ padding: '0 20px' }}>
+        {/* ▼▼▼ プロフィールヘッダーエリア ▼▼▼ */}
+        <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between' }}>
+          <div style={{ display: 'flex', alignItems: 'flex-end', gap: '20px' }}>
+            {profile.avatar_url ? (
+              <img src={profile.avatar_url} alt={profile.username} style={{ width: '120px', height: '120px', borderRadius: '50%', border: '4px solid white' }} />
+            ) : (
+              <div style={{ width: '120px', height: '120px', backgroundColor: '#eee', borderRadius: '50%', border: '4px solid white' }} />
+            )}
+            <div>
+              <h1 style={{ margin: 0 }}>{profile.username}</h1>
+              {profile.birthday && <p style={{ margin: 0 }}>生年月日: {new Date(profile.birthday).toLocaleDateString()}</p>}
+            </div>
+          </div>
+          {isOwnProfile && (
+            <Link to="/profile/edit">
+              <button>プロフィールを編集する</button>
+            </Link>
+          )}
+        </div>
+
+        {/* ▼▼▼ 自己紹介文表示エリア ▼▼▼ */}
+        {profile.bio && (
+          <p style={{ marginTop: '20px', padding: '10px', backgroundColor: '#f9f9f9', borderRadius: '5px' }}>
+            {profile.bio}
+          </p>
+        )}
+      </div>
+
+      <div style={{ padding: '20px' }}></div>
 
       {/* --- お気に入り楽曲 --- */}
       <hr style={{ margin: '30px 0' }} />
