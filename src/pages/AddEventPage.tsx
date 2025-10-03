@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { supabase } from '../lib/supabaseClient';
 import { useNavigate } from 'react-router-dom';
 import type { Session } from '@supabase/supabase-js';
+import { Link } from 'react-router-dom';
 
 interface Props {
   session: Session;
@@ -47,6 +48,9 @@ export const AddEventPage = ({ session }: Props) => {
 
   return (
     <div style={{ maxWidth: '600px', margin: '20px auto' }}>
+      <Link to={`/profile/edit`}>
+        <button>プロフィール編集に戻る</button>
+      </Link>
       <h2>ライブ参加履歴を登録</h2>
       <form onSubmit={handleSubmit}>
         <div>

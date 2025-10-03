@@ -4,6 +4,7 @@ import { FavoriteMusicManager } from '../components/FavoriteMusicManager';
 import { FavoriteArtistManager } from '../components/FavoriteArtistManager';
 import { Avatar } from '../components/Avatar';
 import { HeaderImageUploader } from '../components/HeaderImageUploader';
+import { Link } from 'react-router-dom';
 
 interface Props {
   session: Session;
@@ -13,7 +14,17 @@ export const EditProfilePage = ({ session }: Props) => {
   return (
     <div style={{ maxWidth: '800px', margin: '0 auto', padding: '20px' }}>
       <h1>プロフィールの編集</h1>
+
+      <Link to={`/profile/${session.user.id}`}>
+        <button>プロフィールに戻る</button>
+      </Link>
       
+      <div style={{ marginBottom: '20px' }}>
+        <Link to="/add-event">
+          <button>参加したライブを登録する</button>
+        </Link>
+      </div>
+
       <Avatar session={session} />
       <hr style={{ margin: '30px 0' }} />
       <HeaderImageUploader session={session} />
