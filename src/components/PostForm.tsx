@@ -7,7 +7,10 @@ import type { Post } from '../types';
 interface SpotifyTrack {
   id: string;
   name: string;
-  artists: { name: string }[];
+  artists: { 
+    name: string
+    id: string;
+  }[];
   album: { images: { url: string }[] };
 }
 
@@ -64,6 +67,7 @@ export const PostForm = ({ session, onPostCreated }: Props) => {
         song_name: selectedSong?.name,
         artist_name: selectedSong?.artists.map((a) => a.name).join(', '),
         album_art_url: selectedSong?.album.images[0]?.url,
+        artist_id: selectedSong?.artists[0]?.id,
       };
 
       const { data, error } = await supabase
