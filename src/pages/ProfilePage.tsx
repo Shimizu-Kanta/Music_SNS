@@ -4,6 +4,7 @@ import { supabase } from '../lib/supabaseClient';
 import type { Session } from '@supabase/supabase-js';
 import type { Profile } from '../types';
 import { FollowButton } from '../components/FollowButton';
+import { MusicLinkModal } from '../components/MusicLinkModal';
 
 // 型定義
 interface FavoriteSong {
@@ -41,6 +42,7 @@ export const ProfilePage = ({ session }: Props) => {
   const [attendedConcerts, setAttendedConcerts] = useState<AttendedConcert[]>([]);
   const [followingCount, setFollowingCount] = useState(0);
   const [followerCount, setFollowerCount] = useState(0);
+  const [selectedSong, setSelectedSong] = useState<{ song_name: string, artist_name: string } | null>(null);
 
   useEffect(() => {
     const fetchProfileData = async () => {
@@ -153,7 +155,7 @@ export const ProfilePage = ({ session }: Props) => {
         {favoriteSongs.length > 0 ? (
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px' }}>
             {favoriteSongs.map(song => (
-              <div key={song.id} style={{ textAlign: 'center', width: '100px' }}>
+              <div key={song.id} style={{ textAlign: 'center', width: '100px', cursor: 'pointer' }} onClick={() => setSelectedSong(song)}>
                 <img src={song.album_art_url || 'http://googleusercontent.com/404'} alt={song.song_name} width="100" height="100" />
                 <p style={{ margin: 0, fontSize: '0.8em', wordBreak: 'break-all' }}>{song.song_name}</p>
               </div>
@@ -200,6 +202,14 @@ export const ProfilePage = ({ session }: Props) => {
           <p>まだ参加したライブが登録されていません。</p>
         )}
       </div>
+      {selectedSong && (
+        <MusicLinkModal
+          isOpen={!!selectedSong}
+          onClose={() => setSelectedSong(null)}
+          songName={selectedSong.song_name}
+          artistName={selectedSong.artist_name}
+        />
+      )}
 
     </div>
   );
