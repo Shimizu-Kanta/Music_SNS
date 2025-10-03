@@ -138,7 +138,7 @@ export const Account = ({ session }: Props) => {
 
       <PostForm session={session} onPostCreated={handlePostCreated} />
       
-      {loading ? <p>タイムラインを読み込み中...</p> : <Timeline posts={posts} />}
+      {loading ? <p>タイムラインを読み込み中...</p> : <Timeline posts={posts} session={session}/>}
     </div>
   );
 };
