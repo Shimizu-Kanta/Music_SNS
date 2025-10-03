@@ -20,7 +20,7 @@ serve(async (req) => {
     const searchQuery = encodeURIComponent(`${song_name} ${artist_name}`);
 
     const links = {
-      spotify: `http://googleusercontent.com/spotify.com/5${searchQuery}`,
+      spotify: `https://open.spotify.com/search/${searchQuery}`,
       youtubeMusic: `https://music.youtube.com/search?q=${searchQuery}`,
       appleMusic: `https://music.apple.com/search?term=${searchQuery}`,
     };
