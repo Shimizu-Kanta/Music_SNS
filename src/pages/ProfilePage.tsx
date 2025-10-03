@@ -21,12 +21,12 @@ interface FavoriteArtist {
 interface AttendedConcert {
   id: number;
   notes: string | null;
-  concerts: {
+  concerts: { // オブジェクトの「配列」
     event_date: string;
     artist_name: string;
     event_name: string | null;
     venue_name: string;
-  } | null;
+  }[] | null; // ←ここに[]を追加
 }
 
 interface Props {
@@ -182,26 +182,30 @@ export const ProfilePage = ({ session }: Props) => {
       
       {/* --- 参加したライブ --- */}
       <hr style={{ margin: '30px 0' }} />
-      <div>
-        <h2>参加したライブ</h2>
-        {attendedConcerts.length > 0 ? (
-          <ul style={{ listStyle: 'none', padding: 0 }}>
-            {attendedConcerts.map(item => (
-              item.concerts && (
-                <li key={item.id} style={{ marginBottom: '15px', borderBottom: '1px solid #eee', paddingBottom: '10px' }}>
-                  <strong>{new Date(item.concerts.event_date).toLocaleDateString()}</strong>: {item.concerts.artist_name}
-                  {item.concerts.event_name && ` (${item.concerts.event_name})`}
-                  <br />
-                  <small>会場: {item.concerts.venue_name}</small>
-                  {item.notes && <p style={{ margin: '5px 0 0 10px', whiteSpace: 'pre-wrap', backgroundColor: '#f9f9f9', padding: '5px' }}>メモ: {item.notes}</p>}
-                </li>
-              )
-            ))}
-          </ul>
-        ) : (
-          <p>まだ参加したライブが登録されていません。</p>
-        )}
-      </div>
+      {/* --- 参加したライブ --- */}
+          <hr style={{ margin: '30px 0' }} />
+          <div>
+            <h2>参加したライブ</h2>
+            {attendedConcerts.length > 0 ? (
+              <ul style={{ listStyle: 'none', padding: 0 }}>
+                {attendedConcerts.map(item => (
+                  // item.concertsがnullでなく、要素が1つ以上あることを確認
+                  item.concerts && item.concerts.length > 0 && (
+                    <li key={item.id} style={{ marginBottom: '15px', borderBottom: '1px solid #eee', paddingBottom: '10px' }}>
+                      {/* ▼▼▼ すべてのitem.concertsに[0]を追加 ▼▼▼ */}
+                      <strong>{new Date(item.concerts[0].event_date).toLocaleDateString()}</strong>: {item.concerts[0].artist_name}
+                      {item.concerts[0].event_name && ` (${item.concerts[0].event_name})`}
+                      <br />
+                      <small>会場: {item.concerts[0].venue_name}</small>
+                      {item.notes && <p style={{ margin: '5px 0 0 10px', whiteSpace: 'pre-wrap', backgroundColor: '#f9f9f9', padding: '5px' }}>メモ: {item.notes}</p>}
+                    </li>
+                  )
+                ))}
+              </ul>
+            ) : (
+              <p>まだ参加したライブが登録されていません。</p>
+            )}
+          </div>
       {selectedSong && (
         <MusicLinkModal
           isOpen={!!selectedSong}

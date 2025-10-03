@@ -1,53 +1,186 @@
 import { useState, useEffect } from 'react';
-import type { Post } from '../types';
-import { fetchPosts, createPost } from '../api/posts';
-import { PostForm } from '../components/PostForm';
-import { PostItem } from '../components/PostItem';
+import type { Post, Comment } from '../types'; // Commentをインポート
+import { Link } from 'react-router-dom';
+import { supabase } from '../lib/supabaseClient';
+import type { Session } from '@supabase/supabase-js';
+import { MusicLinkModal } from '../components/MusicLinkModal';
 
-export const Timeline = () => {
-  const [posts, setPosts] = useState<Post[]>([]);
-  const [loading, setLoading] = useState(true);
+// コメント投稿フォームを小さなコンポーネントとして作成
+const CommentForm = ({ postId, userId, onCommentPosted }: { postId: number, userId: string, onCommentPosted: (newComment: Comment) => void }) => {
+  const [comment, setComment] = useState('');
+  const [loading, setLoading] = useState(false);
 
-  // 初期表示時に投稿データを取得
-  useEffect(() => {
-    const loadPosts = async () => {
-      try {
-        const data = await fetchPosts();
-        setPosts(data);
-      } catch (error) {
-        console.error('投稿の取得に失敗しました', error);
-      } finally {
-        setLoading(false);
-      }
-    };
-    loadPosts();
-  }, []);
+  const handleCommentSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!comment.trim()) return;
 
-  // 新しい投稿を追加する処理
-  const handlePostSubmit = async (content: string) => {
     try {
-      const newPost = await createPost(content);
-      // 投稿リストの先頭に新しい投稿を追加
-      setPosts([newPost, ...posts]);
+      setLoading(true);
+      const { data, error } = await supabase
+        .from('comments')
+        .insert({ post_id: postId, user_id: userId, content: comment })
+        .select('*, profiles(username)')
+        .single();
+      
+      if (error) throw error;
+      if (data) {
+        onCommentPosted(data);
+        setComment('');
+      }
     } catch (error) {
-      console.error('投稿に失敗しました', error);
+      if (error instanceof Error) alert(error.message);
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
-    <div style={{ maxWidth: '600px', margin: '0 auto', padding: '20px' }}>
-      <h1>ミニマムSNS</h1>
-      <PostForm onSubmit={handlePostSubmit} />
+    <form onSubmit={handleCommentSubmit} style={{ display: 'flex', marginTop: '10px' }}>
+      <input
+        type="text"
+        placeholder="コメントを追加..."
+        value={comment}
+        onChange={(e) => setComment(e.target.value)}
+        style={{ flexGrow: 1, marginRight: '8px' }}
+      />
+      <button type="submit" disabled={loading}>{loading ? '...' : '投稿'}</button>
+    </form>
+  );
+};
 
-      <h2 style={{ marginTop: '40px' }}>タイムライン</h2>
-      {loading ? (
-        <p>読み込み中...</p>
-      ) : (
-        <div>
-          {posts.map((post) => (
-            <PostItem key={post.id} post={post} />
-          ))}
-        </div>
+interface Props {
+  posts: Post[];
+  session: Session;
+}
+
+export const Timeline = ({ posts: initialPosts, session }: Props) => {
+  const [posts, setPosts] = useState(initialPosts);
+  const [selectedPost, setSelectedPost] = useState<Post | null>(null);
+
+  useEffect(() => {
+    setPosts(initialPosts);
+  }, [initialPosts]);
+
+  const handleLike = async (postId: number) => {
+    const userId = session.user.id;
+    const { error } = await supabase.from('likes').insert({ post_id: postId, user_id: userId });
+    
+    if (error) {
+      alert(error.message);
+    } else {
+      const updatedPosts = posts.map(p => 
+        p.id === postId ? { ...p, likes: [...p.likes, { user_id: userId, post_id: postId, created_at: new Date().toISOString() }] } : p
+      );
+      setPosts(updatedPosts);
+    }
+  };
+
+  const handleUnlike = async (postId: number) => {
+    const userId = session.user.id;
+    const { error } = await supabase
+      .from('likes')
+      .delete()
+      .eq('post_id', postId)
+      .eq('user_id', userId);
+    
+    if (error) {
+      alert(error.message);
+    } else {
+      const updatedPosts = posts.map(p => 
+        p.id === postId ? { ...p, likes: p.likes.filter(l => l.user_id !== userId) } : p
+      );
+      setPosts(updatedPosts);
+    }
+  };
+
+  const handleCommentAdded = (postId: number, newComment: Comment) => {
+    const updatedPosts = posts.map(p => 
+      p.id === postId ? { ...p, comments: [...(p.comments || []), newComment] } : p
+    );
+    setPosts(updatedPosts);
+  };
+
+  const openLinkModal = (post: Post) => {
+    setSelectedPost(post);
+  };
+  const closeLinkModal = () => {
+    setSelectedPost(null);
+  };
+
+  return (
+    <div>
+      <h2>タイムライン</h2>
+      {posts.map((post) => {
+        const isLikedByCurrentUser = post.likes?.some(like => like.user_id === session.user.id);
+        const likeCount = post.likes?.length || 0;
+
+        return (
+          <div key={post.id} style={{ border: '1px solid #ccc', padding: '15px', margin: '15px 0', borderRadius: '8px' }}>
+            
+            <Link to={`/profile/${post.user_id}`} style={{ textDecoration: 'none', color: 'inherit' }}>
+              <div style={{ display: 'flex', alignItems: 'center', marginBottom: '10px' }}>
+                {post.profiles?.avatar_url ? (
+                  <img src={post.profiles.avatar_url} alt={post.profiles.username} style={{ width: '40px', height: '40px', borderRadius: '50%', marginRight: '10px' }} />
+                ) : (
+                  <div style={{ width: '40px', height: '40px', backgroundColor: '#eee', borderRadius: '50%', marginRight: '10px' }} />
+                )}
+                <strong>{post.profiles?.username || '匿名ユーザー'}</strong>
+              </div>
+            </Link>
+            
+            <p style={{ whiteSpace: 'pre-wrap', marginTop: '10px' }}>{post.content}</p>
+            
+            {post.song_name && post.artist_name && (
+              <div onClick={() => openLinkModal(post)} style={{
+                padding: '10px', backgroundColor: '#f0f0f0', 
+                borderRadius: '8px', cursor: 'pointer',
+                display: 'flex', alignItems: 'center', gap: '10px'
+              }}>
+                {post.album_art_url && <img src={post.album_art_url} alt={post.song_name} width="50" height="50" />}
+                <div>
+                  <div><strong>{post.song_name}</strong></div>
+                  <div>{post.artist_name}</div>
+                </div>
+              </div>
+            )}
+            
+            <div style={{ display: 'flex', alignItems: 'center', marginTop: '10px' }}>
+              <button onClick={() => isLikedByCurrentUser ? handleUnlike(post.id) : handleLike(post.id)}>
+                {isLikedByCurrentUser ? '❤️ いいね済み' : '♡ いいね'}
+              </button>
+              <span style={{ marginLeft: '8px' }}>{likeCount}</span>
+            </div>
+            
+            <small style={{ display: 'block', marginTop: '10px', color: '#888' }}>
+              Posted at: {new Date(post.created_at).toLocaleString()}
+            </small>
+
+            <div style={{ marginTop: '15px', borderTop: '1px solid #eee', paddingTop: '10px' }}>
+              {post.comments?.map(comment => (
+                <div key={comment.id} style={{ marginBottom: '8px' }}>
+                  <Link to={`/profile/${comment.user_id}`} style={{ textDecoration: 'none', color: 'inherit' }}>
+                    <strong>{comment.profiles?.username || '匿名'}</strong>
+                  </Link>
+                  <p style={{ margin: '0 0 0 10px', display: 'inline' }}>{comment.content}</p>
+                </div>
+              ))}
+              <CommentForm 
+                postId={post.id} 
+                userId={session.user.id} 
+                onCommentPosted={(newComment) => handleCommentAdded(post.id, newComment)}
+              />
+            </div>
+          </div>
+        );
+      })}
+
+      {selectedPost && (
+        <MusicLinkModal
+          isOpen={!!selectedPost}
+          onClose={closeLinkModal}
+          songName={selectedPost.song_name}
+          artistName={selectedPost.artist_name}
+        />
       )}
     </div>
   );

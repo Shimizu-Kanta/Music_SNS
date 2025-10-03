@@ -15,7 +15,7 @@ export const HomePage = ({ session }: Props) => {
   const fetchPosts = useCallback(async () => {
     const { data, error } = await supabase
       .from('posts')
-      .select('*, profiles(username, avatar_url), likes(*), comments(*, profiles(username, avatar_url)))')
+      .select('*, profiles(username, avatar_url), likes(*), comments(*, profiles:user_id(username, avatar_url))')
       .order('created_at', { ascending: false });
 
     if (error) {
@@ -29,14 +29,16 @@ export const HomePage = ({ session }: Props) => {
     fetchPosts();
   }, [fetchPosts]);
 
+  // PostFormから新しい投稿データを受け取り、Stateを更新する
   const handlePostCreated = (newPost: Post) => {
     setPosts([newPost, ...posts]);
   };
 
   return (
     <div style={{ maxWidth: '600px', margin: '0 auto', padding: '20px' }}>
-      
+      {/* PostFormにはsessionとonPostCreatedだけを渡す */}
       <PostForm session={session} onPostCreated={handlePostCreated} />
+      
       <Timeline posts={posts} session={session} />
     </div>
   );

@@ -1,39 +1,31 @@
+import { supabase } from '../lib/supabaseClient';
 import type { Post } from '../types';
 
-// データベースの代わりのダミーデータ
-let posts: Post[] = [
-  {
-    id: 1,
-    author: 'Taro',
-    content: 'Reactの学習を始めました！',
-    createdAt: new Date().toISOString(),
-  },
-  {
-    id: 2,
-    author: 'Jiro',
-    content: 'Viteは本当に速いですね。',
-    createdAt: new Date().toISOString(),
-  },
-];
-
-// すべての投稿を取得する非同期関数（APIを模倣）
+// Supabaseからすべての投稿を取得する本物の関数
 export const fetchPosts = async (): Promise<Post[]> => {
-  // ネットワーク遅延をシミュレート
-  await new Promise((resolve) => setTimeout(resolve, 500));
-  return posts.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+  const { data, error } = await supabase
+    .from('posts')
+    .select('*, profiles(username, avatar_url), likes(*), comments(*, profiles:user_id(username, avatar_url))')
+    .order('created_at', { ascending: false });
+
+  if (error) {
+    console.error('Error fetching posts:', error);
+    throw error; // エラーを呼び出し元に伝える
+  }
+  return data || [];
 };
 
-// 新しい投稿を追加する非同期関数（APIを模倣）
-export const createPost = async (content: string): Promise<Post> => {
-  await new Promise((resolve) => setTimeout(resolve, 500));
-
-  const newPost: Post = {
-    id: posts.length + 1,
-    author: 'You', // 簡単のため投稿者は固定
-    content,
-    createdAt: new Date().toISOString(),
-  };
-
-  posts = [newPost, ...posts];
-  return newPost;
+// Supabaseに新しい投稿を追加する本物の関数
+export const createPost = async (content: string, user_id: string): Promise<Post> => {
+  const { data, error } = await supabase
+    .from('posts')
+    .insert({ content, user_id })
+    .select('*, profiles(username, avatar_url), likes(*), comments(*)') // 投稿後すぐに全データを取得
+    .single();
+    
+  if (error) {
+    console.error('Error creating post:', error);
+    throw error;
+  }
+  return data;
 };

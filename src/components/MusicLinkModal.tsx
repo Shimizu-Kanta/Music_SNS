@@ -4,8 +4,8 @@ import { supabase } from '../lib/supabaseClient';
 interface Props {
   isOpen: boolean;
   onClose: () => void;
-  songName: string | null;
-  artistName: string | null;
+  songName?: string | null;
+  artistName?: string | null;
 }
 
 interface Links {
