@@ -40,3 +40,5 @@ export interface Profile {
   bio: string | null;
   website: string | null;
 }
+
+export type FilterType = 'ALL' | 'FOLLOWS' | 'FAVORITES' | 'ARTIST';
