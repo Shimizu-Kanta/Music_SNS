@@ -1,11 +1,11 @@
 import { useState, useEffect } from 'react';
-import type { Post, Comment } from '../types'; // Commentをインポート
+import type { Post, Comment } from '../types';
 import { Link } from 'react-router-dom';
 import { supabase } from '../lib/supabaseClient';
 import type { Session } from '@supabase/supabase-js';
 import { MusicLinkModal } from './MusicLinkModal';
 
-// コメント投稿フォームを小さなコンポーネントとして作成
+// (CommentFormは変更なし)
 const CommentForm = ({ postId, userId, onCommentPosted }: { postId: number, userId: string, onCommentPosted: (newComment: Comment) => void }) => {
   const [comment, setComment] = useState('');
   const [loading, setLoading] = useState(false);
@@ -51,11 +51,10 @@ const CommentForm = ({ postId, userId, onCommentPosted }: { postId: number, user
 
 interface Props {
   posts: Post[];
-  session: Session | null;
+  session: Session;
 }
 
 export const Timeline = ({ posts: initialPosts, session }: Props) => {
-
   const [posts, setPosts] = useState(initialPosts);
   const [selectedPost, setSelectedPost] = useState<Post | null>(null);
 
@@ -63,20 +62,15 @@ export const Timeline = ({ posts: initialPosts, session }: Props) => {
     setPosts(initialPosts);
   }, [initialPosts]);
 
-  if (!session) {
-    // まだセッション情報が読み込まれていない場合は、ローディング表示などを出すか、何も表示しない
-    return <div>Loading...</div>; 
-  }
-
   const handleLike = async (postId: number) => {
     const userId = session.user.id;
-    const { error } = await supabase.from('likes').insert({ post_id: postId, user_id: userId });
+    const { data, error } = await supabase.from('likes').insert({ post_id: postId, user_id: userId }).select().single();
     
     if (error) {
       alert(error.message);
-    } else {
+    } else if (data) {
       const updatedPosts = posts.map(p => 
-        p.id === postId ? { ...p, likes: [...p.likes, { user_id: userId }] } : p
+        p.id === postId ? { ...p, likes: [...p.likes, data] } : p
       );
       setPosts(updatedPosts);
     }
@@ -100,7 +94,6 @@ export const Timeline = ({ posts: initialPosts, session }: Props) => {
     }
   };
 
-  // 新しいコメントが投稿されたときに呼ばれる関数
   const handleCommentAdded = (postId: number, newComment: Comment) => {
     const updatedPosts = posts.map(p => 
       p.id === postId ? { ...p, comments: [...(p.comments || []), newComment] } : p
@@ -117,41 +110,39 @@ export const Timeline = ({ posts: initialPosts, session }: Props) => {
 
   return (
     <div>
-      <h2>タイムライン</h2>
+      <h2 style={{marginTop: '40px'}}>タイムライン</h2>
       {posts.map((post) => {
-        // post.likesがない場合も考慮して、より安全なコードに
         const isLikedByCurrentUser = post.likes?.some(like => like.user_id === session.user.id);
         const likeCount = post.likes?.length || 0;
 
         return (
           <div key={post.id} style={{ border: '1px solid #ccc', padding: '15px', margin: '15px 0', borderRadius: '8px' }}>
-            
             <Link to={`/profile/${post.user_id}`} style={{ textDecoration: 'none', color: 'inherit' }}>
-            <div style={{ display: 'flex', alignItems: 'center', marginBottom: '10px' }}>
-              {post.profiles?.avatar_url ? (
-                <img src={post.profiles.avatar_url} alt={post.profiles.username} style={{ width: '40px', height: '40px', borderRadius: '50%', marginRight: '10px' }} />
-              ) : (
-                <div style={{ width: '40px', height: '40px', backgroundColor: '#eee', borderRadius: '50%', marginRight: '10px' }} />
-              )}
-              <strong>{post.profiles?.username || '匿名ユーザー'}</strong>
-            </div>
-          </Link>
+              <div style={{ display: 'flex', alignItems: 'center', marginBottom: '10px' }}>
+                {post.profiles?.avatar_url ? (
+                  <img src={post.profiles.avatar_url} alt={post.profiles.username} style={{ width: '40px', height: '40px', borderRadius: '50%', marginRight: '10px' }} />
+                ) : (
+                  <div style={{ width: '40px', height: '40px', backgroundColor: '#eee', borderRadius: '50%', marginRight: '10px' }} />
+                )}
+                <strong>{post.profiles?.username || '匿名ユーザー'}</strong>
+              </div>
+            </Link>
             
-            {post.content && <p style={{ marginTop: '10px' }}>{post.content}</p>}
+            <p style={{ whiteSpace: 'pre-wrap', marginTop: '10px' }}>{post.content}</p>
             
             {post.song_name && post.artist_name && (
-            <div onClick={() => openLinkModal(post)} style={{
-              padding: '10px', backgroundColor: '#f0f0f0', 
-              borderRadius: '8px', cursor: 'pointer',
-              display: 'flex', alignItems: 'center', gap: '10px'
-            }}>
-              {post.album_art_url && <img src={post.album_art_url} alt={post.song_name} width="50" height="50" />}
-              <div>
-                <div><strong>{post.song_name}</strong></div>
-                <div>{post.artist_name}</div>
+              <div onClick={() => openLinkModal(post)} style={{
+                padding: '10px', backgroundColor: '#f0f0f0', 
+                borderRadius: '8px', cursor: 'pointer',
+                display: 'flex', alignItems: 'center', gap: '10px'
+              }}>
+                {post.album_art_url && <img src={post.album_art_url} alt={post.song_name} width="50" height="50" />}
+                <div>
+                  <div><strong>{post.song_name}</strong></div>
+                  <div>{post.artist_name}</div>
+                </div>
               </div>
-            </div>
-          )}
+            )}
             
             <div style={{ display: 'flex', alignItems: 'center', marginTop: '10px' }}>
               <button onClick={() => isLikedByCurrentUser ? handleUnlike(post.id) : handleLike(post.id)}>
@@ -178,18 +169,18 @@ export const Timeline = ({ posts: initialPosts, session }: Props) => {
                 userId={session.user.id} 
                 onCommentPosted={(newComment) => handleCommentAdded(post.id, newComment)}
               />
-              {selectedPost && (
-                <MusicLinkModal
-                  isOpen={!!selectedPost}
-                  onClose={closeLinkModal}
-                  songName={selectedPost.song_name}
-                  artistName={selectedPost.artist_name}
-                />
-              )}
             </div>
           </div>
         );
       })}
+       {selectedPost && (
+        <MusicLinkModal
+          isOpen={!!selectedPost}
+          onClose={closeLinkModal}
+          songName={selectedPost.song_name}
+          artistName={selectedPost.artist_name}
+        />
+      )}
     </div>
   );
 };
