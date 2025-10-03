@@ -44,9 +44,6 @@ export const Header = ({ session }: Props) => {
             <Link to={`/profile/${session.user.id}`}>マイプロフィール</Link>
           </li>
           <li>
-            <Link to="/add-event">ライブ履歴登録</Link>
-          </li>
-          <li>
             <button onClick={handleLogout}>ログアウト</button>
           </li>
         </ul>
