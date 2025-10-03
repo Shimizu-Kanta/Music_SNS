@@ -41,4 +41,11 @@ export interface Profile {
   website: string | null;
 }
 
+// 「いいね」の型定義
+export interface Like {
+  user_id: string;
+  post_id: number;
+  created_at: string;
+}
+
 export type FilterType = 'ALL' | 'FOLLOWS' | 'FAVORITES' | 'ARTIST';
