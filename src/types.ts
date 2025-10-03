@@ -6,6 +6,7 @@ export interface Post {
   user_id: string;
   profiles: {
     username: string;
+    avatar_url?: string | null;
   } | null;
   song_id?: string | null;
   song_name?: string | null;
@@ -32,5 +33,10 @@ export interface Profile {
   id: string;
   updated_at: string | null;
   username: string;
+  birthday: Date | null;
+  created_at: string | null;
+  avatar_url: string | null;
+  header_url: string | null;
+  bio: string | null;
   website: string | null;
 }

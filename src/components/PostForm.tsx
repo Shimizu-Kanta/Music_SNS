@@ -3,7 +3,7 @@ import { supabase } from '../lib/supabaseClient';
 import type { Session } from '@supabase/supabase-js';
 import type { Post } from '../types';
 
-// Spotifyの検索結果の型を定義
+// Spotifyの検索結果の型
 interface SpotifyTrack {
   id: string;
   name: string;
@@ -11,6 +11,7 @@ interface SpotifyTrack {
   album: { images: { url: string }[] };
 }
 
+// 受け取るPropsを定義 (onSubmitを削除)
 interface Props {
   session: Session;
   onPostCreated: (newPost: Post) => void;
@@ -20,7 +21,7 @@ export const PostForm = ({ session, onPostCreated }: Props) => {
   const [content, setContent] = useState('');
   const [loading, setLoading] = useState(false);
 
-  // 曲検索用の新しいStateを追加
+  // 曲検索用のState
   const [songSearchQuery, setSongSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<SpotifyTrack[]>([]);
   const [selectedSong, setSelectedSong] = useState<SpotifyTrack | null>(null);
@@ -42,10 +43,11 @@ export const PostForm = ({ session, onPostCreated }: Props) => {
   // 検索結果から曲を選択する関数
   const selectSong = (track: SpotifyTrack) => {
     setSelectedSong(track);
-    setSearchResults([]); // 選択したら検索結果はクリア
-    setSongSearchQuery(''); // 検索窓もクリア
+    setSearchResults([]);
+    setSongSearchQuery('');
   };
 
+  // 投稿処理
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (!content.trim() && !selectedSong) {
@@ -53,12 +55,11 @@ export const PostForm = ({ session, onPostCreated }: Props) => {
       return;
     }
 
+    setLoading(true);
     try {
-      setLoading(true);
-      const newPost = {
+      const newPostData = {
         user_id: session.user.id,
         content,
-        // 選択された曲の情報を追加
         song_id: selectedSong?.id,
         song_name: selectedSong?.name,
         artist_name: selectedSong?.artists.map((a) => a.name).join(', '),
@@ -67,10 +68,10 @@ export const PostForm = ({ session, onPostCreated }: Props) => {
 
       const { data, error } = await supabase
         .from('posts')
-        .insert(newPost)
-        .select('*, profiles(username)') // 投稿後すぐにユーザー名も取得
+        .insert(newPostData)
+        .select('*, profiles(username, avatar_url), likes(*), comments(*)')
         .single();
-
+      
       if (error) throw error;
 
       if (data) {
@@ -86,7 +87,7 @@ export const PostForm = ({ session, onPostCreated }: Props) => {
   };
 
   return (
-    <form onSubmit={handleSubmit} style={{ border: '1px solid #ccc', padding: '15px', borderRadius: '8px' }}>
+    <form onSubmit={handleSubmit} style={{ border: '1px solid #ccc', padding: '15px', borderRadius: '8px', marginBottom: '20px' }}>
       <textarea
         placeholder="いまどうしてる？"
         value={content}
@@ -108,9 +109,9 @@ export const PostForm = ({ session, onPostCreated }: Props) => {
 
       {/* --- 検索結果表示 --- */}
       {searchResults.length > 0 && (
-        <ul style={{ listStyle: 'none', padding: 0 }}>
+        <ul style={{ listStyle: 'none', padding: 0, border: '1px solid #eee', marginTop: '5px' }}>
           {searchResults.map((track) => (
-            <li key={track.id} onClick={() => selectSong(track)} style={{ cursor: 'pointer', padding: '5px' }}>
+            <li key={track.id} onClick={() => selectSong(track)} style={{ cursor: 'pointer', padding: '5px', borderBottom: '1px solid #eee' }}>
               {track.name} - {track.artists.map((a) => a.name).join(', ')}
             </li>
           ))}
@@ -125,11 +126,11 @@ export const PostForm = ({ session, onPostCreated }: Props) => {
             <strong>{selectedSong.name}</strong>
             <p style={{ margin: 0 }}>{selectedSong.artists.map((a) => a.name).join(', ')}</p>
           </div>
-          <button type="button" onClick={() => setSelectedSong(null)} style={{ marginLeft: 'auto' }}>✖</button>
+          <button type="button" onClick={() => setSelectedSong(null)} style={{ marginLeft: 'auto', background: 'none', border: 'none', fontSize: '1.2em', cursor: 'pointer' }}>✖</button>
         </div>
       )}
 
-      <button type="submit" disabled={loading}>
+      <button type="submit" disabled={loading} style={{ marginTop: '10px' }}>
         {loading ? '投稿中...' : '投稿する'}
       </button>
     </form>
